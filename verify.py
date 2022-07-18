@@ -22,9 +22,12 @@ if __name__ == '__main__':
     train_y = model(x)
 
     for layer in model.layers:
-        for block in layer.layers:
-            if hasattr(block, 'switch_to_deploy'):
-                block.switch_to_deploy()
+        if hasattr(layer, 'switch_to_deploy'):
+            layer.switch_to_deploy()
+        if hasattr(layer, 'layers'):
+            for block in layer.layers:
+                if hasattr(block, 'switch_to_deploy'):
+                    block.switch_to_deploy()
 
     deploy_y = model(x)
     print(tf.reduce_sum((train_y - deploy_y)**2).numpy())
