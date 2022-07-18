@@ -7,8 +7,8 @@ import numpy as np
 def conv_bn(out_channels, kernel_size, stride, padding, groups=1):
     model = Sequential([
         layers.Conv2D(out_channels, kernel_size=kernel_size,
-              strides=stride, padding=padding, groups=groups, use_bias=False, name="conv"),
-        layers.BatchNormalization(name="bn"),
+              strides=stride, padding=padding, groups=groups, use_bias=False),
+        layers.BatchNormalization(),
     ])
 
     return model
@@ -155,12 +155,12 @@ class MobileOneBlock(layers.Layer):
         if branch is None:
             return 0, 0
         if isinstance(branch, Sequential):
-            kernel = branch.get_layer("conv").kernel
-            running_mean = branch.get_layer("bn").moving_mean
-            running_var = branch.get_layer("bn").moving_variance
-            gamma = branch.get_layer("bn").gamma
-            beta = branch.get_layer("bn").beta
-            eps = branch.get_layer("bn").epsilon
+            kernel = branch.layers[0].kernel
+            running_mean = branch.layers[1].moving_mean
+            running_var = branch.layers[1].moving_variance
+            gamma = branch.layers[1].gamma
+            beta = branch.layers[1].beta
+            eps = branch.layers[1].epsilon
 
         else:
             assert isinstance(branch, layers.BatchNormalization)
@@ -192,23 +192,23 @@ class MobileOneBlock(layers.Layer):
         dw_kernel, dw_bias, pw_kernel, pw_bias = self.get_equivalent_kernel_bias()
 
         self.dw_reparam = layers.Conv2D(
-            filters=self.dw_3x3_0.conv.get_layer("conv").filters,
-            kernel_size=self.dw_3x3_0.conv.get_layer("conv").kernel_size,
-            strides=self.dw_3x3_0.conv.get_layer("conv").strides,
-            padding=self.dw_3x3_0.conv.get_layer("conv").padding,
-            groups=self.dw_3x3_0.conv.get_layer("conv").groups,
+            filters=self.dw_3x3_0.conv.layers[0].filters,
+            kernel_size=self.dw_3x3_0.conv.layers[0].kernel_size,
+            strides=self.dw_3x3_0.conv.layers[0].strides,
+            padding=self.dw_3x3_0.conv.layers[0].padding,
+            groups=self.dw_3x3_0.conv.layers[0].groups,
             use_bias=True,
             weights=[dw_kernel.numpy(), dw_bias.numpy()]
         )
         self.pw_reparam = layers.Conv2D(
-            filters=self.pw_1x1_0.conv.get_layer("conv").filters,
+            filters=self.pw_1x1_0.conv.layers[0].filters,
             kernel_size=1,
             strides=1,
             use_bias=True
         )
 
-        self.dw_reparam.build((1, 32, 32, self.dw_3x3_0.conv.get_layer("conv").groups))
-        self.pw_reparam.build((1, 32, 32, self.dw_3x3_0.conv.get_layer("conv").groups))
+        self.dw_reparam.build((1, 32, 32, self.dw_3x3_0.conv.layers[0].groups))
+        self.pw_reparam.build((1, 32, 32, self.dw_3x3_0.conv.layers[0].groups))
         self.dw_reparam.set_weights([dw_kernel, dw_bias])
         self.pw_reparam.set_weights([pw_kernel, pw_bias])
 
@@ -233,13 +233,12 @@ class MobileOneNet(Model):
 
         self.stage_num = len(blocks)
         # self.stage0 = MobileOneBlock(3, int(channels[0] * width_muls[0]), ks[0], stride=strides[0], deploy=deploy)
-        self.stage0 = Sequential()
-        self.stage0.add(layers.Conv2D(
-            int(channels[0] * width_muls[0]), 3, 2, 'same', use_bias=False))
-
-        self.stage0.add(layers.BatchNormalization())
-        self.stage0.add(layers.ReLU())
-
+        self.stage0 = Sequential([
+            layers.Conv2D(int(channels[0] * width_muls[0]), 3, 2, 'same', use_bias=False),
+            layers.BatchNormalization(),
+            layers.ReLU(),
+        ])
+        
         in_channels = int(channels[0] * width_muls[0])
         for idx, block_num in enumerate(blocks[1:]):
             idx += 1
