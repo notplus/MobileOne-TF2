@@ -232,13 +232,13 @@ class MobileOneNet(Model):
         super().__init__()
 
         self.stage_num = len(blocks)
-        # self.stage0 = MobileOneBlock(3, int(channels[0] * width_muls[0]), ks[0], stride=strides[0], deploy=deploy)
-        self.stage0 = Sequential([
-            layers.Conv2D(int(channels[0] * width_muls[0]), 3, 2, 'same', use_bias=False),
-            layers.BatchNormalization(),
-            layers.ReLU(),
-        ])
-        
+        self.stage0 = MobileOneBlock(3, int(channels[0] * width_muls[0]), ks[0], stride=strides[0], deploy=deploy)
+        # self.stage0 = Sequential([
+        #     layers.Conv2D(int(channels[0] * width_muls[0]), 3, 2, 'same', use_bias=False),
+        #     layers.BatchNormalization(),
+        #     layers.ReLU(),
+        # ])
+
         in_channels = int(channels[0] * width_muls[0])
         for idx, block_num in enumerate(blocks[1:]):
             idx += 1
