@@ -59,7 +59,7 @@ class MobileOneBlock(layers.Layer):
 
         else:
             self.dw_bn_layer = layers.BatchNormalization(
-            ) if out_channels == in_channels and stride == 1 else None
+            ) if stride == 1 else None
             for k_idx in range(k):
                 setattr(self, f'dw_3x3_{k_idx}',
                         DepthWiseConv(in_channels, 3, stride=stride)
